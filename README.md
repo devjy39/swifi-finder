@@ -4,3 +4,5 @@
  사용IDE : IntelliJ <br/>
  사용DB : SQLite3 <br/>
  사용 기술 : 순수 JAVA, JSP <br/>
+ WAS : tomcat8.5 
+ 사용 Library : gson, lombok, sqlite-jdbc, servlet-jsp
