@@ -8,5 +8,4 @@
  - DB : SQLite3
  - 순수 JAVA, JSP
  - WAS : tomcat8.5
- - Library
-  - gson, lombok, sqlite-jdbc, servlet-jsp
+ - Library : servlet-jsp, gson, lombok, sqlite-jdbc
