@@ -18,29 +18,27 @@ import java.util.List;
 
 public class ApiExplorer {
     private static final String REQUEST_URL = "http://openapi.seoul.go.kr:8088";
-    private static final String AUTH_KEY = "인증 키";
+    private static final String AUTH_KEY = "auth key를 입력하세요.";
     private static final String SERVICE_NAME = "TbPublicWifiInfo";
     private static final String ENCODING_TYPE = "UTF-8";
     private static final String FILE_TYPE = "json";
     private static int total_cnt;
+    private static final int MAX_TRANSFER_COUNT = 1000;
+
+    private final WifiInfoService wifiInfoService = new WifiInfoService();
 
     public int openApiDataMigration() {
-        final int maxTransDataCnt = 1000;
         int loadDataCount = 0;
 
+        wifiInfoService.cleanDbTable();
         do {
-            int endIdx = loadDataCount + maxTransDataCnt;
+            int endIdx = loadDataCount + MAX_TRANSFER_COUNT;
             if (total_cnt != 0) {
                 endIdx = Math.min(total_cnt, endIdx);
             }
 
-            List<WifiInfo> wifiInfoList = indexDataMigration(loadDataCount + 1, endIdx);
-            WifiInfoService wifiInfoService = new WifiInfoService();
-            if (wifiInfoService.wifiInsert(wifiInfoList)) {
-                System.out.println("sql error");
-                break;
-            }
-            loadDataCount += maxTransDataCnt;
+            loadDataCount += wifiInfoService.wifiInsert(indexDataMigration(loadDataCount + 1, endIdx));
+            System.out.println("Cumulative number of loaded data: " + loadDataCount);
         } while (loadDataCount < total_cnt);
 
         return total_cnt;
@@ -76,7 +74,7 @@ public class ApiExplorer {
 
                 list = JsonArrayToList(apiJsonData.get("row").getAsJsonArray());
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             connection.disconnect();
@@ -117,14 +115,14 @@ public class ApiExplorer {
     }
 
     private HttpURLConnection connectUrl(int startIdx, int endIdx) throws IOException {
-        StringBuilder urlBuilder = new StringBuilder(REQUEST_URL);
-        urlBuilder.append("/" + URLEncoder.encode(AUTH_KEY, ENCODING_TYPE));
-        urlBuilder.append("/" + URLEncoder.encode(FILE_TYPE, ENCODING_TYPE));
-        urlBuilder.append("/" + URLEncoder.encode(SERVICE_NAME, ENCODING_TYPE));
-        urlBuilder.append("/" + URLEncoder.encode(String.valueOf(startIdx), ENCODING_TYPE));
-        urlBuilder.append("/" + URLEncoder.encode(String.valueOf(endIdx), ENCODING_TYPE));
+        URL url = new URL(new StringBuilder(REQUEST_URL)
+                .append("/" + URLEncoder.encode(AUTH_KEY, ENCODING_TYPE))
+                .append("/" + URLEncoder.encode(FILE_TYPE, ENCODING_TYPE))
+                .append("/" + URLEncoder.encode(SERVICE_NAME, ENCODING_TYPE))
+                .append("/" + URLEncoder.encode(String.valueOf(startIdx), ENCODING_TYPE))
+                .append("/" + URLEncoder.encode(String.valueOf(endIdx), ENCODING_TYPE))
+                .toString());
 
-        URL url = new URL(urlBuilder.toString());
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         conn.setRequestProperty("Content-type", "application/json");
@@ -152,18 +150,24 @@ public class ApiExplorer {
             wifi.setInstMby(object.get("X_SWIFI_INSTL_MBY").getAsString());
             wifi.setSvcSe(object.get("X_SWIFI_SVC_SE").getAsString());
             wifi.setCmcwr(object.get("X_SWIFI_CMCWR").getAsString());
-            wifi.setInstYear(object.get("X_SWIFI_CNSTC_YEAR").getAsInt());
+            wifi.setInstYear(safeParseInt(object.get("X_SWIFI_CNSTC_YEAR").getAsString()));
             wifi.setInOutDoor(object.get("X_SWIFI_INOUT_DOOR").getAsString());
             wifi.setRemars(object.get("X_SWIFI_REMARS3").getAsString());
-            wifi.setLnt(object.get("LNT").getAsDouble());
-            wifi.setLat(object.get("LAT").getAsDouble());
+            wifi.setLnt(safeParseDouble(object.get("LNT").getAsString()));
+            wifi.setLat(safeParseDouble(object.get("LAT").getAsString()));
             wifi.setWorkDateTime(object.get("WORK_DTTM").getAsString());
 
             list.add(wifi);
         }
 
-        System.out.println(list.size() + "개 data load");
-
         return list;
+    }
+
+    private int safeParseInt(String str) {
+        return str.isEmpty() ? 0 : Integer.parseInt(str);
+    }
+
+    private double safeParseDouble(String str) {
+        return str.isEmpty() ? 0 : Double.parseDouble(str);
     }
 }

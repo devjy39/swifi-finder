@@ -45,7 +45,6 @@
                   out.print("<td colspan=\"100%\" style=\"text-align: center;\">위치 히스토리 정보가 없습니다.</td>");
               } else {
                   for (LocationHistory history : list) {
-                      System.out.println(history.getId());
                       out.write("<tr>\n");
                       out.write("<td>"+history.getId()+"</td>\n");
                       out.write("<td>"+history.getLat()+"</td>\n");
